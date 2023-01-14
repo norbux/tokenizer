@@ -1,8 +1,12 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
+	"flag"
 	"fmt"
+	"io"
+	"log"
+	"os"
 	"strings"
 )
 
@@ -19,24 +23,33 @@ const (
 )
 
 func main() {
-	input := `x
-y
-some = test
-z
-`
+	var inputFile string
+	flag.StringVar(&inputFile, "f", "", "Input file")
+	flag.Parse()
 
-	src := []byte(input)
-	fmt.Println(src)
+	input, err := os.Open(inputFile)
+	if err != nil {
+		panic(err)
+	}
 
-	fields := bytes.Fields(src)
-	fmt.Println(fields)
+	defer input.Close()
+
+	reader := bufio.NewReader(input)
+	buf := make([]byte, 1)
 
 	var set []string
 	var id []byte
 
-	for _, t := range src {
+	for {
+		_, err := reader.Read(buf)
+		if err != nil {
+			if err != io.EOF {
+				log.Println(err)
+			}
+			break
+		}
 		// Detect spaces and finalizers
-		if t == sp || t == lb || t == fin {
+		if buf[0] == sp || buf[0] == lb || buf[0] == fin {
 			if string(id) != "" {
 				set = append(set, strings.TrimSpace(string(id)))
 				id = []byte{}
@@ -45,13 +58,13 @@ z
 		}
 
 		// Detect operators as identifiers
-		if strings.Contains(ops, string(t)) {
-			set = append(set, strings.TrimSpace(string(t)))
+		if strings.Contains(ops, string(buf[0])) {
+			set = append(set, strings.TrimSpace(string(buf[0])))
 			id = []byte{}
 			continue
 		}
 
-		id = append(id, t)
+		id = append(id, buf[0])
 	}
 
 	fmt.Println(set)
